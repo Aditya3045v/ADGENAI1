@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { headline, style, brandName, description, logoUrl, productImageUrl } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
     // Build context about uploaded images
     const imageContext = [];
@@ -29,58 +29,54 @@ serve(async (req) => {
 
     const prompt = stylePrompts[style] || stylePrompts.photorealistic;
 
-    // Build message content - include images if provided
-    const messageContent: any[] = [{ type: "text", text: prompt }];
+    console.log("Generating image with OpenRouter DALL-E 3...");
+    console.log("Prompt:", prompt);
 
-    if (productImageUrl) {
-      messageContent.push({
-        type: "image_url",
-        image_url: { url: productImageUrl },
-      });
-    }
-
-    if (logoUrl) {
-      messageContent.push({
-        type: "image_url",
-        image_url: { url: logoUrl },
-      });
-    }
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/images/generations", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://lovable.dev",
+        "X-Title": "Ad Generator",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: messageContent }],
-        modalities: ["image", "text"],
+        model: "openai/dall-e-3",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "hd",
+        response_format: "url",
       }),
     });
 
     if (!response.ok) {
+      const errText = await response.text();
+      console.error("OpenRouter error:", response.status, errText);
+      
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+        return new Response(JSON.stringify({ error: "API credits exhausted. Please add credits." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("AI image error:", response.status, t);
-      throw new Error("AI image generation failed");
+      throw new Error(`OpenRouter API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    console.log("OpenRouter response:", JSON.stringify(data).slice(0, 500));
+    
+    const imageUrl = data.data?.[0]?.url;
 
     if (!imageUrl) {
       throw new Error("No image generated");
     }
+
+    console.log("Image generated successfully");
 
     return new Response(JSON.stringify({ imageUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
