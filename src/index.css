@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --bg-dark: 240 33% 3%;
+    --background: 240 33% 3%;
+    --foreground: 0 0% 100%;
+
+    --card: 240 20% 6%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 20% 6%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 234 89% 74%;
+    --primary-foreground: 240 33% 3%;
+
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 10% 10%;
+    --muted-foreground: 220 10% 56%;
+
+    --accent: 258 90% 66%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.08;
+    --ring: 234 89% 74%;
+
+    --radius: 0.75rem;
+
+    --accent-blue: 217 91% 60%;
+    --accent-violet: 258 90% 66%;
+    --glass-border: 0 0% 100% / 0.08;
+    --glass-bg: 0 0% 100% / 0.03;
+
+    --success: 152 69% 53%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --sidebar-background: 240 20% 6%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 234 89% 74%;
+    --sidebar-primary-foreground: 240 33% 3%;
+    --sidebar-accent: 240 10% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 234 89% 74%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #FFCED8 0%, #D2A8FF 50%, #A371F7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .glass-surface {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-border {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Poster rotating gradient animation */
+@keyframes rotateGradient {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Scroll indicator line animation */
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
