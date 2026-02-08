@@ -6,9 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const TEXT_MODEL = "google/gemini-3-flash-preview";
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1";
+const TEXT_MODEL = "google/gemini-2.5-flash-preview";
+const IMAGE_MODEL = "openai/dall-e-3";
 
 interface CampaignRequest {
   brandName: string;
@@ -21,34 +21,82 @@ interface CampaignRequest {
   productImageMimeType?: string;
 }
 
-/** Shared helper to call the Lovable AI Gateway and handle common errors */
-async function callGateway(
+/** Shared helper to call OpenRouter and handle common errors */
+async function callOpenRouter(
   apiKey: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  const resp = await fetch(GATEWAY_URL, {
+  const resp = await fetch(`${OPENROUTER_URL}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      "HTTP-Referer": "https://lovable.dev",
+      "X-Title": "Ad Generator",
     },
     body: JSON.stringify(body),
   });
 
   if (!resp.ok) {
     const errBody = await resp.text();
-    console.error(`Gateway error [${resp.status}]:`, errBody);
+    console.error(`OpenRouter error [${resp.status}]:`, errBody);
 
     if (resp.status === 429) {
       throw Object.assign(new Error("Rate limit exceeded. Please try again shortly."), { status: 429 });
     }
     if (resp.status === 402) {
-      throw Object.assign(new Error("AI credits exhausted. Please add credits."), { status: 402 });
+      throw Object.assign(new Error("API credits exhausted. Please add credits."), { status: 402 });
     }
-    throw Object.assign(new Error(`AI gateway error: ${resp.status}`), { status: 500 });
+    throw Object.assign(new Error(`OpenRouter API error: ${resp.status}`), { status: 500 });
   }
 
   return resp;
+}
+
+/** Generate image using OpenRouter's DALL-E 3 */
+async function generateImage(
+  apiKey: string,
+  prompt: string
+): Promise<string> {
+  const resp = await fetch(`${OPENROUTER_URL}/images/generations`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://lovable.dev",
+      "X-Title": "Ad Generator",
+    },
+    body: JSON.stringify({
+      model: IMAGE_MODEL,
+      prompt: prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "hd",
+      response_format: "url",
+    }),
+  });
+
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    console.error(`OpenRouter image error [${resp.status}]:`, errBody);
+
+    if (resp.status === 429) {
+      throw Object.assign(new Error("Rate limit exceeded. Please try again shortly."), { status: 429 });
+    }
+    if (resp.status === 402) {
+      throw Object.assign(new Error("API credits exhausted. Please add credits."), { status: 402 });
+    }
+    throw Object.assign(new Error(`OpenRouter image API error: ${resp.status}`), { status: 500 });
+  }
+
+  const data = await resp.json();
+  const imageUrl = data.data?.[0]?.url;
+  
+  if (!imageUrl) {
+    throw new Error("No image was generated. Please try again.");
+  }
+  
+  return imageUrl;
 }
 
 /** Build an error Response with CORS */
@@ -75,8 +123,8 @@ serve(async (req) => {
       productImageMimeType,
     }: CampaignRequest = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
     // ============================
     // STEP 1: Analyze product image (if provided)
@@ -86,7 +134,7 @@ serve(async (req) => {
     if (productImageBase64 && productImageMimeType) {
       console.log("Step 1: Analyzing product image with vision...");
 
-      const visionResp = await callGateway(LOVABLE_API_KEY, {
+      const visionResp = await callOpenRouter(OPENROUTER_API_KEY, {
         model: TEXT_MODEL,
         messages: [
           {
@@ -183,7 +231,7 @@ Write the flyer design prompt.`,
       },
     ];
 
-    const promptResp = await callGateway(LOVABLE_API_KEY, {
+    const promptResp = await callOpenRouter(OPENROUTER_API_KEY, {
       model: TEXT_MODEL,
       messages: promptEngineerMessages,
     });
@@ -196,34 +244,15 @@ Write the flyer design prompt.`,
     if (!imagenPrompt) throw new Error("Failed to generate image prompt");
 
     // ============================
-    // STEP 3: Generate image with Nano Banana
+    // STEP 3: Generate image with OpenRouter DALL-E 3
     // ============================
-    console.log("Step 3: Generating image with Nano Banana (gemini-2.5-flash-image)...");
+    console.log("Step 3: Generating image with OpenRouter DALL-E 3...");
 
-    const imageResp = await callGateway(LOVABLE_API_KEY, {
-      model: IMAGE_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: `Design a premium 1080x1080 square promotional flyer. This must look like a polished, print-ready marketing poster with bold typography, dramatic product placement, and professional graphic design composition. Every element should feel intentional and high-end.\n\n${imagenPrompt}`,
-        },
-      ],
-      modalities: ["image", "text"],
-    });
+    const finalPrompt = `Design a premium 1080x1080 square promotional flyer. This must look like a polished, print-ready marketing poster with bold typography, dramatic product placement, and professional graphic design composition. Every element should feel intentional and high-end.\n\n${imagenPrompt}`;
+    
+    const imageUrl = await generateImage(OPENROUTER_API_KEY, finalPrompt);
 
-    const imageData = await imageResp.json();
-    const imageUrl =
-      imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageUrl) {
-      console.error(
-        "Unexpected image response structure:",
-        JSON.stringify(imageData).slice(0, 500)
-      );
-      throw new Error("No image was generated. Please try again.");
-    }
-
-    console.log("Image generated successfully (data URL length:", imageUrl.length, ")");
+    console.log("Image generated successfully");
 
     // ============================
     // STEP 4: Generate matching caption
@@ -232,7 +261,7 @@ Write the flyer design prompt.`,
 
     let caption = "";
     try {
-      const captionResp = await callGateway(LOVABLE_API_KEY, {
+      const captionResp = await callOpenRouter(OPENROUTER_API_KEY, {
         model: TEXT_MODEL,
         messages: [
           {
