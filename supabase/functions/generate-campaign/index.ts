@@ -90,11 +90,24 @@ serve(async (req) => {
         model: TEXT_MODEL,
         messages: [
           {
+            role: "system",
+            content: `You are an elite product photographer and visual analyst. Your analysis will be used by an AI image generator to recreate this product perfectly in a new marketing context.
+
+ANALYSIS FRAMEWORK:
+1. PRODUCT IDENTIFICATION: What is this product? Category, type, and purpose.
+2. PHYSICAL ATTRIBUTES: Exact colors (use specific color names like "matte charcoal", "rose gold", "arctic white"), materials (glossy plastic, brushed aluminum, soft leather), textures, and surface finishes.
+3. FORM & PROPORTIONS: Shape, dimensions relative to each other, distinctive silhouette features.
+4. KEY VISUAL ELEMENTS: Logos, labels, unique design features, patterns, hardware, or embellishments.
+5. LIGHTING CHARACTERISTICS: How does light interact with the product? Reflective, matte, translucent, metallic sheen?
+
+OUTPUT: A dense, specific 4-5 sentence description optimized for image generation. Use concrete visual language, not marketing speak.`,
+          },
+          {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `You are an expert product analyst. Analyze this product image in detail. Describe the product, its colors, textures, materials, shape, and any notable features. Be specific and vivid so a text-to-image AI can recreate this product accurately in a new scene. Keep your description to 3-4 sentences.`,
+                text: "Analyze this product image with extreme precision for AI image generation.",
               },
               {
                 type: "image_url",
@@ -118,68 +131,119 @@ serve(async (req) => {
     console.log("Step 2: Engineering image generation prompt...");
 
     const styleDescriptions: Record<string, string> = {
-      Photorealistic:
-        "photorealistic product photography, studio lighting, dramatic shadows, crisp focus, commercial advertising quality",
-      Neon: "neon lights, dark moody atmosphere, vibrant glowing colors, cyberpunk-inspired, electric accents, futuristic vibe",
-      Pastel:
-        "soft pastel colors, minimalist, clean, gentle gradients, calming aesthetic, airy whitespace",
-      Luxury:
-        "luxury, gold accents, rich textures, premium feel, elegant composition, dark tones, velvet-like depth",
+      Photorealistic: `ULTRA-REALISTIC COMMERCIAL PHOTOGRAPHY STYLE:
+- Shot on Phase One IQ4 150MP medium format camera with Schneider 80mm f/2.8 lens
+- Three-point studio lighting: key light with large softbox at 45°, fill light at 1:4 ratio, rim light for product separation
+- Perfectly controlled shadows with gradient falloff, subtle ambient occlusion
+- 8K resolution quality, razor-sharp product focus with gentle depth of field on background
+- Color-accurate with professional color grading, neutral but rich tones`,
+      
+      Neon: `CINEMATIC CYBERPUNK NEON STYLE:
+- Deep noir darkness (near-black background with selective illumination)
+- Intense saturated neon lighting: electric cyan (#00FFFF), hot magenta (#FF00FF), electric violet (#8B00FF)
+- Dramatic light rays, volumetric fog/haze catching neon beams
+- Reflective wet surfaces, chrome/mirror accents catching neon reflections
+- High contrast with crushed blacks and blown-out neon highlights
+- Blade Runner / Tron aesthetic with futuristic tech-noir atmosphere`,
+      
+      Pastel: `REFINED MINIMALIST PASTEL STYLE:
+- Soft, diffused natural lighting with no harsh shadows
+- Limited palette: dusty rose (#E8D5D5), sage green (#B4C4AE), powder blue (#B6D0E2), cream (#FFF8E7), blush pink (#F4C2C2)
+- Generous negative space (60%+ of composition)
+- Subtle paper/canvas texture overlay for organic warmth
+- Soft rounded geometric accents, thin elegant lines
+- Scandinavian-inspired clean composition, Marie Kondo aesthetic`,
+      
+      Luxury: `OPULENT HIGH-END LUXURY STYLE:
+- Rich, moody lighting with dramatic chiaroscuro (Renaissance-inspired light/shadow)
+- Deep blacks, champagne golds (#F7E7CE), rose gold (#B76E79), platinum silver
+- Materials: black velvet, Italian marble, polished ebony, liquid gold
+- Subtle ambient glow, candlelit warmth with modern precision
+- Baroque-inspired decorative flourishes, art deco geometric patterns
+- Vogue/Harper's Bazaar editorial quality, aspirational and exclusive`,
     };
 
-    const styleDesc =
-      styleDescriptions[visualStyle] || styleDescriptions.Photorealistic;
+    const styleDesc = styleDescriptions[visualStyle] || styleDescriptions.Photorealistic;
 
     const productSection = productContext
-      ? `\n\nIMPORTANT PRODUCT CONTEXT (from analyzing the uploaded product photo):\n${productContext}\nYou MUST incorporate this exact product into the scene as the hero element. The product should be large, centered or slightly off-center, and dominate the composition.`
+      ? `
+
+HERO PRODUCT (CRITICAL - MUST BE ACCURATE):
+${productContext}
+
+PRODUCT PLACEMENT RULES:
+- Position as the PRIMARY focal point, occupying 25-35% of the composition
+- Place slightly off-center (rule of thirds) for dynamic composition
+- Angle the product 15-30° for dimensional interest, not flat/straight-on
+- Apply cinematic lighting that matches the style while highlighting product details
+- Ensure product colors and details are EXACTLY as described above`
       : "";
 
     const promptEngineerMessages = [
       {
         role: "system",
-        content: `You are a world-class Graphic Designer who creates award-winning marketing flyers and posters. Your task: write ONE detailed prompt for an AI image generator to produce a stunning promotional flyer.
+        content: `You are a legendary Creative Director at a top-tier advertising agency (Wieden+Kennedy, Droga5 caliber). You've created campaigns for Nike, Apple, and Coca-Cola. Your task: craft ONE masterful prompt for AI image generation that will produce an award-winning promotional visual.
 
-MANDATORY DESIGN RULES:
-1. TYPOGRAPHY IS KING:
-   - The headline "${headlineText}" MUST be the dominant visual — rendered in MASSIVE, ultra-bold display typography (at least 40% of the composition)
-   - Use dramatic font treatments: 3D extrusion, metallic finishes, neon glow, gradient fills, or embossed effects
-   - Brand name "${brandName}" appears smaller but styled consistently
-   - ALL text must be spelled EXACTLY as provided
+CREATIVE BRIEF:
+- Brand: ${brandName}
+- Industry: ${industry}
+- Campaign Theme: ${theme}
+- Hero Headline: "${headlineText}"
+- Brand Color: ${brandColor}
 
-2. PRODUCT AS HERO:
-   - The product is the second focal point, positioned prominently (floating, angled dynamically, or on a pedestal)
-   - Lit with cinematic studio lighting — sharp highlights, controlled shadows, rim lighting for depth
-   - Product should feel tangible and premium
+VISUAL STYLE SPECIFICATIONS:
+${styleDesc}
+
+MANDATORY DESIGN PRINCIPLES:
+
+1. TYPOGRAPHY HIERARCHY (Most Important Element):
+   - HEADLINE "${headlineText}" must be MASSIVE and DOMINANT — occupying 30-40% of visual weight
+   - Typography treatment: Choose ONE dramatic approach:
+     * 3D extruded letters with ${brandColor} lighting and metallic sheen
+     * Bold sans-serif with gradient fill from ${brandColor} to complementary color
+     * Neon-glow effect with soft bloom and light trails
+     * Elegant serif with gold foil / emboss effect for luxury
+   - Text must be PERFECTLY LEGIBLE and spelled EXACTLY as provided
+   - Brand name "${brandName}" as secondary element, styled consistently but smaller
+
+2. COMPOSITION & LAYOUT:
+   - 1:1 square format (Instagram-optimized)
+   - Clear visual hierarchy: Headline → Product → Supporting elements
+   - Use rule of thirds for product/text placement
+   - Strong foreground/background separation with depth layers
+   - Dynamic diagonal lines or curves to guide eye movement
 
 3. BACKGROUND & ATMOSPHERE:
-   - Rich, layered background — NOT flat or plain. Use: gradient meshes, textured surfaces (velvet, concrete, brushed metal), atmospheric fog, bokeh, or environmental context
-   - Brand color ${brandColor} woven throughout as accent: in lighting, gradients, decorative elements, and typography highlights
+   - NEVER flat or solid-color backgrounds
+   - Rich environmental context OR abstract gradient with texture
+   - Atmospheric depth: subtle fog, bokeh, light particles, or lens flare
+   - Brand color ${brandColor} integrated as accent lighting, gradients, or design elements
 
-4. LAYOUT & COMPOSITION:
-   - Professional graphic design layout with clear Z-pattern or F-pattern visual flow
-   - Add design accents: geometric shapes, diagonal slashes, circular offer badges, thin rule lines, floating particles or confetti
-   - Strong contrast between foreground elements and background
-   - Include a promotional badge/sticker element (e.g., "LIMITED TIME", percentage off, etc.)
+4. FINISHING TOUCHES:
+   - Add ONE promotional element: badge, sticker, or banner with offer text
+   - Include subtle design accents: geometric shapes, thin lines, or floating particles
+   - Professional color grading that unifies all elements
+   - Photorealistic rendering quality, commercial-grade finish
 
-5. STYLE: ${styleDesc}
-6. THEME: ${theme}-themed for ${industry}
-
-OUTPUT RULES:
-- Output ONLY the prompt text — no explanations, no prefixes
-- Describe the final design as if photographing an existing poster
-- Under 200 words
-- Do NOT use words like "generate" or "create"`,
+OUTPUT FORMAT:
+- Write ONLY the image prompt (no explanations, no prefixes, no markdown)
+- Describe the scene as if photographing an existing finished poster
+- Maximum 250 words
+- Use specific, concrete visual language
+- Do NOT use words like "generate", "create", or "AI"`,
       },
       {
         role: "user",
-        content: `Brand: ${brandName}
-Industry: ${industry}
-Theme: ${theme}
-Headline: "${headlineText}"
-Style: ${visualStyle}
-Color: ${brandColor}${productSection}
+        content: `Design an award-winning promotional flyer for:
 
-Write the flyer design prompt.`,
+BRAND: ${brandName}
+INDUSTRY: ${industry}  
+THEME: ${theme}
+HEADLINE: "${headlineText}"
+STYLE: ${visualStyle}
+BRAND COLOR: ${brandColor}${productSection}
+
+Write the image generation prompt now.`,
       },
     ];
 
@@ -189,8 +253,7 @@ Write the flyer design prompt.`,
     });
 
     const promptData = await promptResp.json();
-    const imagenPrompt =
-      promptData.choices?.[0]?.message?.content?.trim() || "";
+    const imagenPrompt = promptData.choices?.[0]?.message?.content?.trim() || "";
     console.log("Engineered prompt:", imagenPrompt);
 
     if (!imagenPrompt) throw new Error("Failed to generate image prompt");
@@ -200,12 +263,30 @@ Write the flyer design prompt.`,
     // ============================
     console.log("Step 3: Generating image with Gemini 3 Pro Image...");
 
+    const imageGenerationPrompt = `Create a stunning, professional marketing flyer image.
+
+TECHNICAL SPECIFICATIONS:
+- Format: 1080x1080 pixel square (1:1 aspect ratio)
+- Quality: Ultra-high resolution, print-ready, commercial advertising grade
+- Style: Professional graphic design, polished and premium
+
+CRITICAL REQUIREMENTS:
+- All text must be PERFECTLY spelled and highly legible
+- The headline "${headlineText}" must be the dominant visual element with dramatic typography
+- Professional color grading and lighting
+- Clean composition with strong visual hierarchy
+
+DESIGN EXECUTION:
+${imagenPrompt}
+
+Render this as a finished, professional marketing poster ready for immediate use in a paid advertising campaign.`;
+
     const imageResp = await callGateway(LOVABLE_API_KEY, {
       model: IMAGE_MODEL,
       messages: [
         {
           role: "user",
-          content: `Design a premium 1080x1080 square promotional flyer. This must look like a polished, print-ready marketing poster with bold typography, dramatic product placement, and professional graphic design composition. Every element should feel intentional and high-end.\n\n${imagenPrompt}`,
+          content: imageGenerationPrompt,
         },
       ],
       modalities: ["image", "text"],
