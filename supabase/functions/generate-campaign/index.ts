@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1";
-const TEXT_MODEL = "google/gemini-2.5-flash-preview";
+const TEXT_MODEL = "google/gemini-2.0-flash-001";
 const IMAGE_MODEL = "openai/dall-e-3";
 
 interface CampaignRequest {
